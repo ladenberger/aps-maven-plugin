@@ -2,12 +2,13 @@ package com.ladenberger.aps.maven.plugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
+import java.util.StringJoiner;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.maven.plugin.MojoExecutionException;
 import org.apache.maven.plugins.annotations.Component;
@@ -22,21 +23,8 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 	/**
 	 * The name of the overall module to use for the templates
 	 */
-	@Parameter(defaultValue = "templates-main", required = true)
+	@Parameter(defaultValue = "activitiApp", required = true)
 	private String moduleName;
-
-	/**
-	 * Specifies the angular location in requireJS configuration.
-	 */
-	@Parameter(defaultValue = "angular")
-	private String angularDependency;
-
-	/**
-	 * Comma separated list of patterns to identify files to be treated as
-	 * templates
-	 */
-	@Parameter(defaultValue = "**/*.html")
-	private String include;
 
 	/**
 	 * Prefix to put before the cache key
@@ -45,29 +33,16 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 	private String prefix;
 
 	/**
-	 * Comma separated list of patterns to identify files to be ignored
-	 */
-	@Parameter
-	private String exclude;
-
-	/**
 	 * Location for the generated templates js file
 	 */
-	@Parameter(defaultValue = "${basedir}/src/main/generated/js/templates.js", required = true)
-	private File target;
+	@Parameter(defaultValue = "${basedir}/src/main/webapp/scripts/dynamic-stencils/templates.js", readonly = true)
+	private File templateTargetFile;
 
-	/**
-	 * A flag to indicate if a require.js compatible wrapper should be written
-	 * around the output
-	 */
-	@Parameter(defaultValue = "false", required = true)
-	private boolean addRequireWrapper;
+	@Parameter(defaultValue = "${basedir}/src/main/webapp/scripts/dynamic-stencils/dynamicStencil.js", readonly = true)
+	private File dynamicDirectiveFile;
 
-	/**
-	 * Statements to insert at top of generated file - e.g. jshint directives
-	 */
-	@Parameter
-	private List<String> preambles;
+	@Parameter(defaultValue = "${basedir}/src/main/webapp/scripts/app-cfg.js", readonly = true)
+	private File appConfigurationFile;
 
 	@Component(role = org.sonatype.plexus.build.incremental.BuildContext.class)
 	private BuildContext buildContext;
@@ -77,30 +52,16 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 	public void execute() throws MojoExecutionException {
 		long start = System.currentTimeMillis();
 		try {
-			includes = include == null ? null : include.split(",");
-			excludes = exclude == null ? null : exclude.split(",");
+
 			prefix = prefix == null ? "" : prefix;
 
-			getLog().debug("-------------------------------------------------");
-			getLog().debug("---Html2js Mojo ---------------------------------");
-			getLog().debug("---moduleName: " + moduleName);
-			getLog().debug("---sourceDir: " + sourceDir.getAbsolutePath());
-			getLog().debug("---angularDependency: " + angularDependency);
-			getLog().debug("---includes: " + (includes == null ? "null" : Arrays.asList(includes)));
-			getLog().debug("---excludes: " + (excludes == null ? "null" : Arrays.asList(excludes)));
-			getLog().debug("---target: " + target.getAbsolutePath());
-			getLog().debug("---addRequireWrapper: " + addRequireWrapper);
-			getLog().debug("---prefix: \"" + prefix + "\"");
-			getLog().debug("---preambles: " + preambles);
-			getLog().debug("-------------------------------------------------");
-
 			if (!isBuildNeeded()) {
-				getLog().info("Html2js:: Nothing to do");
+				getLog().debug("Nothing to do ...");
 				return;
 			}
 
-			if (!target.getParentFile().exists()) {
-				target.getParentFile().mkdirs();
+			if (!templateTargetFile.getParentFile().exists()) {
+				templateTargetFile.getParentFile().mkdirs();
 			}
 
 			try {
@@ -108,8 +69,9 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 			} catch (final Exception e) {
 				throw new MojoExecutionException("", e);
 			}
+
 		} finally {
-			getLog().info("Html2js:: took " + (System.currentTimeMillis() - start) + "ms");
+			getLog().debug("Goal took " + (System.currentTimeMillis() - start) + "ms");
 		}
 	}
 
@@ -118,38 +80,44 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 	 * build AND the target file is still there
 	 * 
 	 * @return true if a build is needed, otherwise false
+	 * @throws MojoExecutionException
 	 */
-	private boolean isBuildNeeded() {
+	private boolean isBuildNeeded() throws MojoExecutionException {
+
 		if (!buildContext.isIncremental()) {
 			// always needed if we're not doing an incremental build
-			getLog().info("Html2js:: full build");
+			getLog().debug("Full build");
 			return true;
 		}
 
 		// ensure the target exists
-		if (!target.exists()) {
-			getLog().info("Html2js:: detected target file missing");
+		if (!templateTargetFile.exists() || !dynamicDirectiveFile.exists() || !appConfigurationFile.exists()) {
+			getLog().debug(
+					"Stencils template target file, dynamic directive file or app configuration file is missing file missing");
 			return true;
 		}
 
 		// check for any deleted files
-		List<File> deleted = findFiles(buildContext.newDeleteScanner(sourceDir));
-		for (File deletedFile : deleted) {
-			getLog().info("Html2js:: detected deleted template: " + shorten(deletedFile));
-		}
-		// next check for any new/changed files
-		List<File> changed = findFiles(buildContext.newScanner(sourceDir));
-		for (File changedFile : changed) {
-			getLog().info("Html2js:: detected new/changed template: " + shorten(changedFile));
-		}
-		if (changed.size() > 0 || deleted.size() > 0) {
-			return true;
-		}
+		/*
+		 * List<File> deleted =
+		 * findFiles(buildContext.newDeleteScanner(sourceDir)); for (File
+		 * deletedFile : deleted) {
+		 * getLog().info("Html2js:: detected deleted template: " +
+		 * shorten(deletedFile)); }
+		 * 
+		 * // next check for any new/changed files List<File> changed =
+		 * findFiles(buildContext.newScanner(sourceDir)); for (File changedFile
+		 * : changed) {
+		 * getLog().info("Html2js:: detected new/changed template: " +
+		 * shorten(changedFile)); }
+		 * 
+		 * if (changed.size() > 0 || deleted.size() > 0) { return true; }
+		 */
 
 		// determine the last modified template
 		long lastModified = 0;
 		File lastModifiedFile = null;
-		for (File templateFile : findFiles()) {
+		for (File templateFile : findTemplateFiles()) {
 			if (templateFile.lastModified() > lastModified) {
 				lastModifiedFile = templateFile;
 				lastModified = templateFile.lastModified();
@@ -157,61 +125,42 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 		}
 
 		// check if the target is as recent as the last modified template
-		if (lastModifiedFile != null && !buildContext.isUptodate(target, lastModifiedFile)) {
-			getLog().info("Html2js:: target file was changed or is older than " + shorten(lastModifiedFile));
+		if (lastModifiedFile != null && !buildContext.isUptodate(templateTargetFile, lastModifiedFile)) {
+			getLog().info("Template target file was changed or is older than " + lastModifiedFile.getPath());
 			return true;
 		}
+
 		return false;
-	}
 
-	private String shorten(final File file) {
-		return shorten(file.getAbsolutePath());
-	}
-
-	private String shorten(final String absolute) {
-		return absolute.replace(sourceDir.getAbsolutePath(), "");
 	}
 
 	private void doIt() throws Exception {
-		if (sourceDir == null || !sourceDir.exists()) {
-			throw new MojoExecutionException(
-					"Html2js:: Could not find the source folder: " + sourceDir.getAbsolutePath());
-		}
-		// first make a list of all templates
-		List<File> files = findFiles();
-		Collections.sort(files);
+
 		List<String> lines = new ArrayList<>();
-
-		// add the preambles
-		if (preambles != null) {
-			lines.addAll(preambles);
-		}
-
-		if (addRequireWrapper) {
-			lines.add("define(['" + angularDependency + "'], function (angular){");
-			lines.add("");
-		}
-
-		for (final File file : files) {
-			getLog().debug("Html2js:: found: " + file.getName());
-		}
 
 		lines.add("angular.module('" + moduleName + "').run(['$templateCache', function($templateCache) {");
 
-		for (final File file : files) {
-			String shortName = prefix
-					+ file.getAbsolutePath().replace(sourceDir.getAbsolutePath(), "").replace("\\", "/");
+		for (CustomStencil customStencil : stencils) {
+
+			File stencilTemplateFile = new File(
+					dynamicStencilsFolder.getPath() + File.separator + customStencil.getName() + "-stencil"
+							+ File.separator + customStencil.getName() + "-directive.html");
+
+			if (!stencilTemplateFile.exists()) {
+				throw new MojoExecutionException("No stencil template file found at " + stencilTemplateFile.getPath());
+			}
+
 			List<String> fileLines = null;
 			try {
-				fileLines = FileUtils.readLines(file);
+				fileLines = FileUtils.readLines(stencilTemplateFile);
 			} catch (IOException ex) {
-				throw new MojoExecutionException("Html2js:: Unable to read template file: " + file.getAbsolutePath(),
-						ex);
+				throw new MojoExecutionException(
+						"Unable to read template file: " + stencilTemplateFile.getAbsolutePath(), ex);
 			}
 			if (fileLines.isEmpty()) {
-				lines.add("\t$templateCache.put('" + shortName + "', \"\");");
+				lines.add("\t$templateCache.put('" + customStencil.getName() + "', \"\");");
 			} else {
-				lines.add("\t$templateCache.put('" + shortName + "',");
+				lines.add("\t$templateCache.put('" + customStencil.getName() + "',");
 				for (String line : fileLines) {
 					lines.add("\t\"" + line.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n\" +");
 				}
@@ -222,21 +171,60 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		lines.add("}]);");
 
-		if (addRequireWrapper) {
-			lines.add("");
-			lines.add("return null;");
-			lines.add("});");
-		}
-
 		// finally emit the output file
 		try {
-			getLog().info("Html2js:: Writing output file: " + target.getAbsolutePath());
-			FileUtils.writeLines(target, lines);
+			getLog().debug("Writing output file: " + templateTargetFile.getAbsolutePath());
+			FileUtils.writeLines(templateTargetFile, lines);
 		} catch (final IOException ex) {
-			throw new MojoExecutionException("Html2js:: Unable to write output file: " + target.getAbsolutePath(), ex);
+			throw new MojoExecutionException("Unable to write output file: " + templateTargetFile.getAbsolutePath(),
+					ex);
 		}
 
-		buildContext.refresh(target);
+		buildContext.refresh(templateTargetFile);
+
+		// Write dynamic stencil directive
+		if (!dynamicDirectiveFile.exists()) {
+
+			InputStream dynamicStencilJsInputStream = getClass().getClassLoader()
+					.getResourceAsStream("dynamicStencil.js");
+			FileUtils.copyInputStreamToFile(dynamicStencilJsInputStream, dynamicDirectiveFile);
+
+		}
+
+		// Write app-cfg.js file
+		if (!appConfigurationFile.exists()) {
+
+			List<String> appConfigurationFileLines = IOUtils
+					.readLines(getClass().getClassLoader().getResourceAsStream("app-cfg.js"));
+
+			StringJoiner stringJoiner = new StringJoiner(", ", "'", "'");
+			for (CustomStencil stencil : stencils) {
+				stringJoiner.add(stencil.getName());
+			}
+
+			appConfigurationFileLines.set(35, "var customStencils = [" + stringJoiner.toString() + "]");
+
+			FileUtils.writeLines(appConfigurationFile, appConfigurationFileLines);
+
+		}
+
+	}
+
+	private List<File> findTemplateFiles() throws MojoExecutionException {
+
+		List<File> templateFiles = new ArrayList<>();
+
+		for (CustomStencil customStencil : stencils) {
+			File stencilTemplateFile = new File(dynamicStencilsFolder + File.separator + customStencil.getName()
+					+ "-stencil" + File.separator + customStencil.getName() + "-directive.html");
+			if (!stencilTemplateFile.exists()) {
+				throw new MojoExecutionException("No stencil template file found at " + stencilTemplateFile.getPath());
+			}
+			templateFiles.add(stencilTemplateFile);
+		}
+
+		return templateFiles;
+
 	}
 
 }
