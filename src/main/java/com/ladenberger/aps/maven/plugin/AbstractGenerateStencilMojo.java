@@ -18,4 +18,6 @@ public abstract class AbstractGenerateStencilMojo extends AbstractMojo {
 	@Parameter(defaultValue = "${basedir}/src/main/webapp/workflow/dynamic-stencils", readonly = true)
 	protected File dynamicStencilsFolder;
 
+	protected static String TARGET_FOLDER_NAME = "aps-app";
+
 }

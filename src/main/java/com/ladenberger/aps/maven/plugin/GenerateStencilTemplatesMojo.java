@@ -1,11 +1,16 @@
 package com.ladenberger.aps.maven.plugin;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.Writer;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import java.util.StringJoiner;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -17,24 +22,16 @@ import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.sonatype.plexus.build.incremental.BuildContext;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+
 @Mojo(name = "stencil-templates", defaultPhase = LifecyclePhase.GENERATE_RESOURCES)
 public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
-	/**
-	 * The name of the overall module to use for the templates
-	 */
 	@Parameter(defaultValue = "activitiApp", required = true)
 	private String moduleName;
 
-	/**
-	 * Prefix to put before the cache key
-	 */
-	@Parameter
-	private String prefix;
-
-	/**
-	 * Location for the generated templates js file
-	 */
 	@Parameter(defaultValue = "${basedir}/src/main/webapp/scripts/dynamic-stencils/templates.js", readonly = true)
 	private File templateTargetFile;
 
@@ -50,69 +47,48 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 	/** @see org.apache.maven.plugin.Mojo#execute() */
 	@Override
 	public void execute() throws MojoExecutionException {
+
 		long start = System.currentTimeMillis();
+
 		try {
 
-			prefix = prefix == null ? "" : prefix;
-
-			if (!isBuildNeeded()) {
-				getLog().debug("Nothing to do ...");
-				return;
+			if (isBuildNeededDynamicStencilDirectiveFile()) {
+				createDynamicStencilDirectiveFile();
 			}
 
-			if (!templateTargetFile.getParentFile().exists()) {
-				templateTargetFile.getParentFile().mkdirs();
+			if (isBuildNeededAppConfigurationFile()) {
+				createAppConfigurationFile();
 			}
 
-			try {
-				doIt();
-			} catch (final Exception e) {
-				throw new MojoExecutionException("", e);
+			if (isBuildNeededTemplatesFile()) {
+				createTemplatesFile();
 			}
 
 		} finally {
 			getLog().debug("Goal took " + (System.currentTimeMillis() - start) + "ms");
 		}
+
 	}
 
-	/**
-	 * We can skip if no files were deleted, modified or added since the last
-	 * build AND the target file is still there
-	 * 
-	 * @return true if a build is needed, otherwise false
-	 * @throws MojoExecutionException
-	 */
-	private boolean isBuildNeeded() throws MojoExecutionException {
+	private boolean isBuildNeededDynamicStencilDirectiveFile() {
+		return !dynamicDirectiveFile.exists() || !buildContext.isIncremental();
+	}
+
+	private boolean isBuildNeededAppConfigurationFile() throws MojoExecutionException {
+		return !appConfigurationFile.exists() || !buildContext.isIncremental() || stencilsChanged();
+	}
+
+	private boolean isBuildNeededTemplatesFile() throws MojoExecutionException {
 
 		if (!buildContext.isIncremental()) {
 			// always needed if we're not doing an incremental build
-			getLog().debug("Full build");
 			return true;
 		}
 
 		// ensure the target exists
-		if (!templateTargetFile.exists() || !dynamicDirectiveFile.exists() || !appConfigurationFile.exists()) {
-			getLog().debug(
-					"Stencils template target file, dynamic directive file or app configuration file is missing file missing");
+		if (!templateTargetFile.exists()) {
 			return true;
 		}
-
-		// check for any deleted files
-		/*
-		 * List<File> deleted =
-		 * findFiles(buildContext.newDeleteScanner(sourceDir)); for (File
-		 * deletedFile : deleted) {
-		 * getLog().info("Html2js:: detected deleted template: " +
-		 * shorten(deletedFile)); }
-		 * 
-		 * // next check for any new/changed files List<File> changed =
-		 * findFiles(buildContext.newScanner(sourceDir)); for (File changedFile
-		 * : changed) {
-		 * getLog().info("Html2js:: detected new/changed template: " +
-		 * shorten(changedFile)); }
-		 * 
-		 * if (changed.size() > 0 || deleted.size() > 0) { return true; }
-		 */
 
 		// determine the last modified template
 		long lastModified = 0;
@@ -126,7 +102,10 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		// check if the target is as recent as the last modified template
 		if (lastModifiedFile != null && !buildContext.isUptodate(templateTargetFile, lastModifiedFile)) {
-			getLog().info("Template target file was changed or is older than " + lastModifiedFile.getPath());
+			return true;
+		}
+
+		if (stencilsChanged()) {
 			return true;
 		}
 
@@ -134,7 +113,102 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 	}
 
-	private void doIt() throws Exception {
+	private boolean stencilsChanged() throws MojoExecutionException {
+
+		boolean changed = true;
+
+		String apsTargetFolderPath = project.getBuild().getDirectory() + File.separator + TARGET_FOLDER_NAME;
+		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
+
+		File stencilsStateFile = new File(apsTargetFolderPath + File.separator + "dynamic-stencils.json");
+		if (stencilsStateFile.exists()) {
+
+			try (FileReader fileReader = new FileReader(stencilsStateFile)) {
+
+				Type listType = new TypeToken<ArrayList<CustomStencil>>() {
+				}.getType();
+
+				List<CustomStencil> oldStencilState = gson.fromJson(fileReader, listType);
+
+				changed = !Arrays.deepEquals(oldStencilState.toArray(new CustomStencil[oldStencilState.size()]),
+						stencils.toArray(new CustomStencil[stencils.size()]));
+
+			} catch (IOException e) {
+				throw new MojoExecutionException(
+						"Could not find stencils state file at " + stencilsStateFile.getPath());
+			}
+
+		}
+
+		if (changed) {
+
+			if (!stencilsStateFile.getParentFile().exists()) {
+				stencilsStateFile.getParentFile().mkdir();
+			}
+
+			try (Writer writer = new FileWriter(stencilsStateFile)) {
+				gson.toJson(stencils, writer);
+			} catch (IOException e) {
+				throw new MojoExecutionException(
+						"An error occurred while writing to stencils state file at " + stencilsStateFile.getPath(), e);
+			}
+
+		}
+
+		return changed;
+
+	}
+
+	private void createDynamicStencilDirectiveFile() throws MojoExecutionException {
+
+		InputStream dynamicStencilJsInputStream = getClass().getClassLoader().getResourceAsStream("dynamicStencil.js");
+		try {
+			FileUtils.copyInputStreamToFile(dynamicStencilJsInputStream, dynamicDirectiveFile);
+		} catch (IOException e) {
+			throw new MojoExecutionException("Unable to write dynamic stencil directive file", e);
+		}
+
+	}
+
+	private void createAppConfigurationFile() throws MojoExecutionException {
+
+		List<String> appConfigurationFileLines;
+		try {
+			appConfigurationFileLines = IOUtils
+					.readLines(getClass().getClassLoader().getResourceAsStream("app-cfg.js"));
+		} catch (IOException e) {
+			throw new MojoExecutionException("Unable to read app-cfg.js file", e);
+		}
+
+		for (CustomStencil stencil : stencils) {
+
+			for (ScriptFile scriptFile : stencil.getScripts()) {
+
+				appConfigurationFileLines.add("ACTIVITI.CONFIG.resources['workflow'].push({");
+				appConfigurationFileLines.add("\t'tag' : 'script',");
+				appConfigurationFileLines.add("\t'type' : 'text/javascript',");
+				appConfigurationFileLines
+						.add("\t'src' : ACTIVITI.CONFIG.webContextRoot + '/workflow/dynamic-stencils/'");
+				appConfigurationFileLines
+						.add("\t\t+ '" + stencil.getName() + "-stencil/scripts/" + scriptFile.getName() + "?v=1.0'");
+				appConfigurationFileLines.add("});");
+
+			}
+
+		}
+
+		appConfigurationFileLines.set(35, "var customStencils = ["
+				+ stencils.stream().map(cs -> "'" + cs.getName() + "'").collect(Collectors.joining(",")) + "]");
+
+		try {
+			FileUtils.writeLines(appConfigurationFile, appConfigurationFileLines);
+		} catch (IOException e) {
+			throw new MojoExecutionException("Unable to write app-cfg.js file", e);
+		}
+
+	}
+
+	private void createTemplatesFile() throws MojoExecutionException {
 
 		List<String> lines = new ArrayList<>();
 
@@ -181,32 +255,6 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 		}
 
 		buildContext.refresh(templateTargetFile);
-
-		// Write dynamic stencil directive
-		if (!dynamicDirectiveFile.exists()) {
-
-			InputStream dynamicStencilJsInputStream = getClass().getClassLoader()
-					.getResourceAsStream("dynamicStencil.js");
-			FileUtils.copyInputStreamToFile(dynamicStencilJsInputStream, dynamicDirectiveFile);
-
-		}
-
-		// Write app-cfg.js file
-		if (!appConfigurationFile.exists()) {
-
-			List<String> appConfigurationFileLines = IOUtils
-					.readLines(getClass().getClassLoader().getResourceAsStream("app-cfg.js"));
-
-			StringJoiner stringJoiner = new StringJoiner(", ", "'", "'");
-			for (CustomStencil stencil : stencils) {
-				stringJoiner.add(stencil.getName());
-			}
-
-			appConfigurationFileLines.set(35, "var customStencils = [" + stringJoiner.toString() + "]");
-
-			FileUtils.writeLines(appConfigurationFile, appConfigurationFileLines);
-
-		}
 
 	}
 

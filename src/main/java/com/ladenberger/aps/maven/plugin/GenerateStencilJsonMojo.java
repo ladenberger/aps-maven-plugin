@@ -2,18 +2,18 @@ package com.ladenberger.aps.maven.plugin;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.Writer;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
+import java.util.Random;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -40,21 +40,186 @@ public class GenerateStencilJsonMojo extends AbstractGenerateStencilMojo {
 	@Parameter(required = true)
 	private String stencilsName;
 
-	List<String> filesListInDir = new ArrayList<String>();
+	private List<String> filesListInDir = new ArrayList<String>();
 
-	private static String TARGET_FOLDER_NAME = "aps-app";
+	private Gson gson = new GsonBuilder().disableHtmlEscaping().create();
 
 	@Override
 	public void execute() throws MojoExecutionException, MojoFailureException {
 
-		File appFolder = new File(appPath);
+		String targetAppFolderPath = project.getBuild().getDirectory() + File.separator + TARGET_FOLDER_NAME;
 
+		// Copy original App definition resources to target folder (prepare for
+		// modification)
+		File targetAppResourcesFolder = copyAppDefinitionResources(targetAppFolderPath);
+
+		// Get JSON stencil file from App definition resources
+		File jsonStencilFile = findStencilJsonFile(targetAppResourcesFolder);
+
+		JsonArray jsonStencilArray;
+		JsonElement jsonElement;
+
+		JsonParser parser = new JsonParser();
+
+		// Modify original stencils Json file with template and controller data
+		try (FileReader fileReader = new FileReader(jsonStencilFile)) {
+
+			jsonElement = parser.parse(fileReader);
+			JsonObject jsonObject = jsonElement.getAsJsonObject();
+
+			jsonStencilArray = jsonObject.getAsJsonArray("fieldTypes");
+
+			if (jsonStencilArray == null) {
+				throw new MojoExecutionException("Wrong Json format, expected 'fieldTypes' property");
+			}
+
+		} catch (IOException e) {
+			throw new MojoExecutionException("Could not find file at " + jsonStencilFile.getPath());
+		}
+
+		InputStream customStencilJsonInputStream = getClass().getClassLoader()
+				.getResourceAsStream("customStencil.json");
+		JsonObject newCustomStencilJsonObject = (JsonObject) parser
+				.parse(new InputStreamReader(customStencilJsonInputStream));
+
+		for (CustomStencil stencil : stencils) {
+
+			JsonObject dynamicStencilObject = findDynamicStencilObject(jsonStencilArray, stencil.getName());
+			if (dynamicStencilObject == null) {
+				dynamicStencilObject = newCustomStencilJsonObject;
+				dynamicStencilObject.addProperty("customType", stencil.getName());
+				dynamicStencilObject.addProperty("title", stencil.getName());
+				jsonStencilArray.add(dynamicStencilObject);
+			}
+
+			// Set new template value
+			dynamicStencilObject.addProperty("template", getDirectiveData("directive.html", stencil.getName()));
+			// Set new controller value
+			dynamicStencilObject.addProperty("componentControllerCode", getDirectiveData("ctrl.js", stencil.getName()));
+
+			handleScriptFiles(stencil, dynamicStencilObject, targetAppResourcesFolder);
+
+		}
+
+		// Write modified stencils Json file
+		try (Writer writer = new FileWriter(jsonStencilFile)) {
+			gson.toJson(jsonElement, writer);
+		} catch (IOException e) {
+			throw new MojoExecutionException("An error occurred while writing to stencils Json file", e);
+		}
+
+		// Zip the modified App definition data
+		zipDirectory(targetAppResourcesFolder, targetAppFolderPath + File.separator + stencilsName + ".zip");
+
+	}
+
+	private void handleScriptFiles(CustomStencil stencil, JsonObject dynamicStencilObject,
+			File targetAppResourcesFolder) throws MojoExecutionException {
+
+		if (stencil.getScripts().size() > 0) {
+
+			File stencilsFolder = new File(
+					targetAppResourcesFolder.getPath() + File.separator + "stencils" + File.separator + "scripts");
+
+			if (!stencilsFolder.exists()) {
+				stencilsFolder.mkdir();
+			}
+
+			JsonArray jsonScriptFilesArray = dynamicStencilObject.getAsJsonArray("scriptFiles");
+			if (jsonScriptFilesArray == null) {
+				jsonScriptFilesArray = new JsonArray();
+				dynamicStencilObject.add("scriptFiles", jsonScriptFilesArray);
+			}
+
+			Random random = new Random();
+
+			for (ScriptFile scriptFile : stencil.getScripts()) {
+
+				File directiveDataFile = new File(dynamicStencilsFolder + File.separator + stencil.getName()
+						+ "-stencil" + File.separator + "scripts" + File.separator + scriptFile.getName());
+
+				if (!directiveDataFile.exists()) {
+					throw new MojoExecutionException(
+							"Stencil script file '" + scriptFile.getName() + "' does not exist");
+				}
+
+				int randomInt = random.nextInt(9999);
+
+				File destFile = new File(
+						stencilsFolder.getPath() + File.separator + randomInt + "-" + scriptFile.getName());
+				try {
+					FileUtils.copyFile(directiveDataFile, destFile);
+				} catch (IOException e) {
+					throw new MojoExecutionException("Error creating file " + destFile.getPath(), e);
+				}
+
+				JsonObject scriptFileJsonObject = new JsonObject();
+				scriptFileJsonObject.addProperty("id", randomInt);
+
+				jsonScriptFilesArray.add(scriptFileJsonObject);
+
+			}
+
+		}
+
+	}
+
+	private JsonObject findDynamicStencilObject(JsonArray jsonStencilArray, String stencilName) {
+
+		Iterator<JsonElement> fieldTypesIterator = jsonStencilArray.iterator();
+
+		while (fieldTypesIterator.hasNext()) {
+
+			JsonObject customStencilJsonObject = (JsonObject) fieldTypesIterator.next();
+
+			String fieldTypeValue = customStencilJsonObject.get("type").getAsString();
+			if ("custom".equalsIgnoreCase(fieldTypeValue)) {
+				String stencilType = customStencilJsonObject.get("customType").getAsString();
+				if (stencilType.equals(stencilName)) {
+					return customStencilJsonObject;
+				}
+			}
+
+		}
+
+		return null;
+
+	}
+
+	private String getDirectiveData(String type, String stencilName) throws MojoExecutionException {
+
+		File directiveDataFile = new File(dynamicStencilsFolder + File.separator + stencilName + "-stencil"
+				+ File.separator + stencilName + "-" + type);
+
+		if (!directiveDataFile.exists()) {
+			throw new MojoExecutionException("No directive data file found at " + directiveDataFile.getPath());
+		}
+
+		List<String> templateFileLines = null;
+		try {
+			templateFileLines = FileUtils.readLines(directiveDataFile);
+		} catch (IOException ex) {
+			throw new MojoExecutionException(
+					"Unable to read directive data file: " + directiveDataFile.getAbsolutePath(), ex);
+		}
+
+		StringBuilder templateStrBuilder = new StringBuilder();
+		for (String line : templateFileLines) {
+			templateStrBuilder.append(line + "\n");
+		}
+
+		return templateStrBuilder.toString();
+
+	}
+
+	private File copyAppDefinitionResources(String targetAppFolderPath) throws MojoExecutionException {
+
+		File appFolder = new File(appPath);
 		if (!appFolder.exists()) {
 			throw new MojoExecutionException("Application folder '" + appPath + "' does not exist");
 		}
 
 		// Create target folder structure, i.e. copy APS to target folder
-		String targetAppFolderPath = project.getBuild().getDirectory() + File.separator + TARGET_FOLDER_NAME;
 		File targetAppResourcesFolder = new File(targetAppFolderPath + File.separator + "resources");
 		try {
 			FileUtils.copyDirectory(appFolder, targetAppResourcesFolder);
@@ -62,121 +227,7 @@ public class GenerateStencilJsonMojo extends AbstractGenerateStencilMojo {
 			throw new MojoExecutionException("An error occurred while creating target build structure", e);
 		}
 
-		File jsonStencilFile = findStencilJsonFile(targetAppResourcesFolder);
-
-		// Collect stencil templates and controllers
-		Map<String, String> stencilTemplateMap = new HashMap<>();
-		Map<String, String> stencilControllerMap = new HashMap<>();
-
-		for (CustomStencil customStencil : stencils) {
-
-			File stencilTemplateFile = new File(dynamicStencilsFolder + File.separator + customStencil.getName()
-					+ "-stencil" + File.separator + customStencil.getName() + "-directive.html");
-
-			if (!stencilTemplateFile.exists()) {
-				throw new MojoExecutionException("No stencil template file found at " + stencilTemplateFile.getPath());
-			}
-
-			File stencilControllerFile = new File(dynamicStencilsFolder + File.separator + customStencil.getName()
-					+ "-stencil" + File.separator + customStencil.getName() + "-ctrl.js");
-
-			if (!stencilControllerFile.exists()) {
-				throw new MojoExecutionException(
-						"No stencil controller file found at " + stencilControllerFile.getPath());
-			}
-
-			List<String> templateFileLines = null;
-			try {
-				templateFileLines = FileUtils.readLines(stencilTemplateFile);
-			} catch (IOException ex) {
-				throw new MojoExecutionException(
-						"Unable to read template file: " + stencilTemplateFile.getAbsolutePath(), ex);
-			}
-
-			StringBuilder templateStrBuilder = new StringBuilder();
-			for (String line : templateFileLines) {
-				templateStrBuilder.append(line + "\n");
-			}
-
-			stencilTemplateMap.put(customStencil.getName(), templateStrBuilder.toString());
-
-			List<String> controllerFileLines = null;
-			try {
-				controllerFileLines = FileUtils.readLines(stencilControllerFile);
-			} catch (IOException ex) {
-				throw new MojoExecutionException(
-						"Unable to read stencil controller file: " + stencilControllerFile.getPath(), ex);
-			}
-
-			StringBuilder controllerStrBuilder = new StringBuilder();
-			for (String line : controllerFileLines) {
-				controllerStrBuilder.append(line + "\n");
-			}
-
-			getLog().debug(controllerStrBuilder.toString());
-
-			stencilControllerMap.put(customStencil.getName(), controllerStrBuilder.toString());
-
-		}
-		// --------------------------
-
-		// Modify original stencils Json file with template and controller data
-		getLog().debug("Found stencils json file: " + jsonStencilFile.getPath());
-		getLog().debug("Start parsing stencils json file ...");
-
-		FileReader fileReader;
-
-		try {
-			getLog().debug("Configured stencils: " + stencils);
-			fileReader = new FileReader(jsonStencilFile);
-		} catch (FileNotFoundException e) {
-			throw new MojoExecutionException("Could not find file at " + jsonStencilFile.getPath());
-		}
-
-		JsonParser parser = new JsonParser();
-		JsonElement jsonElement = parser.parse(fileReader);
-		JsonObject jsonObject = jsonElement.getAsJsonObject();
-
-		JsonArray fieldTypes = jsonObject.getAsJsonArray("fieldTypes");
-
-		if (fieldTypes == null) {
-			throw new MojoExecutionException("Wrong Json format, expected 'fieldTypes' property");
-		}
-
-		Iterator<JsonElement> fieldTypesIterator = fieldTypes.iterator();
-		while (fieldTypesIterator.hasNext()) {
-
-			JsonObject fieldType = (JsonObject) fieldTypesIterator.next();
-			String fieldTypeValue = fieldType.get("type").getAsString();
-			if ("custom".equalsIgnoreCase(fieldTypeValue)) {
-
-				String stencilType = fieldType.get("customType").getAsString();
-
-				getLog().debug("Custom field type found ...");
-				getLog().debug("Type of custom stencil: " + stencilType);
-
-				if (stencilTemplateMap.containsKey(stencilType)) {
-					getLog().debug(stencilType + " is configured as dynamic stencil ...");
-					fieldType.addProperty("template", stencilTemplateMap.get(stencilType));
-					getLog().debug(stencilControllerMap.get(stencilType));
-					fieldType.addProperty("componentControllerCode", stencilControllerMap.get(stencilType));
-				}
-
-			}
-
-		}
-
-		// Write modified stencils Json file
-		try (Writer writer = new FileWriter(targetAppResourcesFolder.getPath() + File.separator + "stencils"
-				+ File.separator + jsonStencilFile.getName())) {
-			Gson gson = new GsonBuilder().disableHtmlEscaping().create();
-			gson.toJson(jsonElement, writer);
-		} catch (IOException e) {
-			throw new MojoExecutionException("An error occurred while writing to Json file", e);
-		}
-
-		// Zip the modified App definition data
-		zipDirectory(targetAppResourcesFolder, targetAppFolderPath + File.separator + stencilsName + ".zip");
+		return targetAppResourcesFolder;
 
 	}
 

@@ -1,0 +1,37 @@
+{
+    "type": "custom",
+    "customType": "newStencil",
+    "title": "NewStencil",
+    "width": 1,
+    "template": "",
+    "formBuilderTemplate": "",
+    "fieldValue": "value",
+    "valueType": "string",
+    "tabs": [{
+      "id": "general",
+      "name": "FORM-BUILDER.TABS.GENERAL",
+      "properties": [{
+        "id": "label",
+        "name": "FORM-BUILDER.COMPONENT.LABEL",
+        "type": "label"
+      }, {
+        "id": "id",
+        "name": "FORM-BUILDER.COMPONENT.ID",
+        "type": "id"
+      }, {
+        "id": "required",
+        "name": "FORM-BUILDER.COMPONENT.REQUIRED",
+        "type": "required"
+      }]
+    }, {
+      "id": "visibility",
+      "name": "FORM-BUILDER.TABS.VISIBILITY",
+      "properties": [{
+        "id": "visibility",
+        "name": "FORM-BUILDER.TABS.VISIBILITY",
+        "type": "visibility",
+        "hideLabel": true
+      }]
+    }],
+    "componentControllerCode": ""
+ }
