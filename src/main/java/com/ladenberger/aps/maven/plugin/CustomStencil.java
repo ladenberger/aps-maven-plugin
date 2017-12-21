@@ -3,6 +3,8 @@ package com.ladenberger.aps.maven.plugin;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.google.gson.Gson;
+
 public class CustomStencil {
 
 	private String name;
@@ -23,6 +25,12 @@ public class CustomStencil {
 
 	public void setScripts(List<ScriptFile> scripts) {
 		this.scripts = scripts;
+	}
+
+	@Override
+	public String toString() {
+		Gson gson = new Gson();
+		return gson.toJson(this);
 	}
 
 }

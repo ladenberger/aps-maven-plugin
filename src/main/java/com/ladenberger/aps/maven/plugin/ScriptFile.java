@@ -1,5 +1,7 @@
 package com.ladenberger.aps.maven.plugin;
 
+import com.google.gson.Gson;
+
 public class ScriptFile {
 
 	private String name;
@@ -10,6 +12,12 @@ public class ScriptFile {
 
 	public void setName(String name) {
 		this.name = name;
+	}
+	
+	@Override
+	public String toString() {
+		Gson gson = new Gson();
+		return gson.toJson(this);
 	}
 
 }

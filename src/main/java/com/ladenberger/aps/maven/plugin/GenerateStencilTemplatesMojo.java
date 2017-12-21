@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.io.Writer;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -52,15 +51,17 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		try {
 
+			boolean stencilsChanged = stencilsChanged();
+
 			if (isBuildNeededDynamicStencilDirectiveFile()) {
 				createDynamicStencilDirectiveFile();
 			}
 
-			if (isBuildNeededAppConfigurationFile()) {
+			if (isBuildNeededAppConfigurationFile() || stencilsChanged) {
 				createAppConfigurationFile();
 			}
 
-			if (isBuildNeededTemplatesFile()) {
+			if (isBuildNeededTemplatesFile() || stencilsChanged) {
 				createTemplatesFile();
 			}
 
@@ -75,7 +76,7 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 	}
 
 	private boolean isBuildNeededAppConfigurationFile() throws MojoExecutionException {
-		return !appConfigurationFile.exists() || !buildContext.isIncremental() || stencilsChanged();
+		return !appConfigurationFile.exists() || !buildContext.isIncremental();
 	}
 
 	private boolean isBuildNeededTemplatesFile() throws MojoExecutionException {
@@ -105,17 +106,13 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 			return true;
 		}
 
-		if (stencilsChanged()) {
-			return true;
-		}
-
 		return false;
 
 	}
 
 	private boolean stencilsChanged() throws MojoExecutionException {
 
-		boolean changed = true;
+		boolean changed = false;
 
 		String apsTargetFolderPath = project.getBuild().getDirectory() + File.separator + TARGET_FOLDER_NAME;
 		Gson gson = new GsonBuilder().disableHtmlEscaping().create();
@@ -130,8 +127,7 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 				List<CustomStencil> oldStencilState = gson.fromJson(fileReader, listType);
 
-				changed = !Arrays.deepEquals(oldStencilState.toArray(new CustomStencil[oldStencilState.size()]),
-						stencils.toArray(new CustomStencil[stencils.size()]));
+				changed = !oldStencilState.toString().equals(stencils.toString());
 
 			} catch (IOException e) {
 				throw new MojoExecutionException(
@@ -140,7 +136,7 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		}
 
-		if (changed) {
+		if (changed || !stencilsStateFile.exists()) {
 
 			if (!stencilsStateFile.getParentFile().exists()) {
 				stencilsStateFile.getParentFile().mkdir();
@@ -205,6 +201,8 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 		} catch (IOException e) {
 			throw new MojoExecutionException("Unable to write app-cfg.js file", e);
 		}
+
+		buildContext.refresh(appConfigurationFile);
 
 	}
 
