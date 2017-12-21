@@ -51,6 +51,11 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		try {
 
+			File targetFolder = new File(project.getBuild().getDirectory());
+			if (!targetFolder.exists()) {
+				targetFolder.mkdir();
+			}
+
 			boolean stencilsChanged = stencilsChanged();
 
 			if (isBuildNeededDynamicStencilDirectiveFile()) {
@@ -138,8 +143,16 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		if (changed || !stencilsStateFile.exists()) {
 
+			// Check if target/aps-app exists
 			if (!stencilsStateFile.getParentFile().exists()) {
 				stencilsStateFile.getParentFile().mkdir();
+			}
+
+			try {
+				stencilsStateFile.createNewFile();
+			} catch (IOException e) {
+				throw new MojoExecutionException(
+						"An error occurred while creating stencils state file at " + stencilsStateFile.getPath(), e);
 			}
 
 			try (Writer writer = new FileWriter(stencilsStateFile)) {
