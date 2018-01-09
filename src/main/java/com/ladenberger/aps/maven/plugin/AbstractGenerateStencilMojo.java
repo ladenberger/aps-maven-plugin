@@ -1,6 +1,7 @@
 package com.ladenberger.aps.maven.plugin;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.maven.plugin.AbstractMojo;
@@ -13,7 +14,7 @@ public abstract class AbstractGenerateStencilMojo extends AbstractMojo {
 	protected MavenProject project;
 
 	@Parameter
-	protected List<CustomStencil> stencils;
+	protected List<CustomStencil> stencils = new ArrayList<CustomStencil>();
 
 	@Parameter(defaultValue = "${basedir}/src/main/webapp/workflow/dynamic-stencils", readonly = true)
 	protected File dynamicStencilsFolder;

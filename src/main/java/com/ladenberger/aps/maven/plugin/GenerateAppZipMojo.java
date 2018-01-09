@@ -31,8 +31,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 
-@Mojo(name = "stencil-json", defaultPhase = LifecyclePhase.PREPARE_PACKAGE)
-public class GenerateStencilJsonMojo extends AbstractGenerateStencilMojo {
+@Mojo(name = "app-zip", defaultPhase = LifecyclePhase.PREPARE_PACKAGE)
+public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 	@Parameter(defaultValue = "${basedir}/app", required = true)
 	private String appPath;
