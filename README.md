@@ -46,6 +46,8 @@ Plugin with useful tools and helper for the development of custom stencils for A
 		...
 ```
 
+The plugin expects 
+
 ## Auto Update in Eclipse
 
 Add this snippet to your pom.xml to enable updating the dynamic stencil templates files automatically whenever you add/change/delete a template (design or controller). The plugin is designed to be incremental build aware. 
@@ -81,4 +83,22 @@ Add this snippet to your pom.xml to enable updating the dynamic stencil template
 					</configuration>
 				</plugin>
 			...	
+```
+
+Based on the configuration, the plugin will look for the following files in your Maven WAR project:
+
+```
+src
+-main
+--webapp
+---workflow
+----dynamic-stencils
+-----notes-stencil
+------notes-directive.html
+------notes-ctrl.js
+-----signature-stencil
+------signature-directive.html
+------signature-ctrl.js
+------scripts
+-------signature_pad.js
 ```
