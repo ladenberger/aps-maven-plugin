@@ -127,12 +127,12 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 			try (FileReader fileReader = new FileReader(stencilsStateFile)) {
 
-				Type listType = new TypeToken<ArrayList<CustomStencil>>() {
+				Type listType = new TypeToken<ArrayList<CustomField>>() {
 				}.getType();
 
-				List<CustomStencil> oldStencilState = gson.fromJson(fileReader, listType);
+				List<CustomField> oldStencilState = gson.fromJson(fileReader, listType);
 
-				changed = !oldStencilState.toString().equals(stencils.toString());
+				changed = !oldStencilState.toString().equals(fields.toString());
 
 			} catch (IOException e) {
 				throw new MojoExecutionException(
@@ -156,7 +156,7 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 			}
 
 			try (Writer writer = new FileWriter(stencilsStateFile)) {
-				gson.toJson(stencils, writer);
+				gson.toJson(fields, writer);
 			} catch (IOException e) {
 				throw new MojoExecutionException(
 						"An error occurred while writing to stencils state file at " + stencilsStateFile.getPath(), e);
@@ -189,7 +189,7 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 			throw new MojoExecutionException("Unable to read app-cfg.js file", e);
 		}
 
-		for (CustomStencil stencil : stencils) {
+		for (CustomField stencil : fields) {
 
 			for (ScriptFile scriptFile : stencil.getScripts()) {
 
@@ -199,15 +199,15 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 				appConfigurationFileLines
 						.add("\t'src' : ACTIVITI.CONFIG.webContextRoot + '/workflow/dynamic-stencils/'");
 				appConfigurationFileLines
-						.add("\t\t+ '" + stencil.getName() + "-stencil/scripts/" + scriptFile.getName() + "?v=1.0'");
+						.add("\t\t+ '" + stencil.getName() + "-field/scripts/" + scriptFile.getName() + "?v=1.0'");
 				appConfigurationFileLines.add("});");
 
 			}
 
 		}
 
-		appConfigurationFileLines.set(35, "var customStencils = ["
-				+ stencils.stream().map(cs -> "'" + cs.getName() + "'").collect(Collectors.joining(",")) + "]");
+		appConfigurationFileLines.set(35, "var customFields = ["
+				+ fields.stream().map(cs -> "'" + cs.getName() + "'").collect(Collectors.joining(",")) + "]");
 
 		try {
 			FileUtils.writeLines(appConfigurationFile, appConfigurationFileLines);
@@ -225,11 +225,11 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		lines.add("angular.module('" + moduleName + "').run(['$templateCache', function($templateCache) {");
 
-		for (CustomStencil customStencil : stencils) {
+		for (CustomField customStencil : fields) {
 
 			File stencilTemplateFile = new File(
-					dynamicStencilsFolder.getPath() + File.separator + customStencil.getName() + "-stencil"
-							+ File.separator + customStencil.getName() + "-directive.html");
+					dynamicStencilsFolder.getPath() + File.separator + customStencil.getName() + "-field"
+							+ File.separator + customStencil.getName() + "-runtime.html");
 
 			if (!stencilTemplateFile.exists()) {
 				throw new MojoExecutionException("No stencil template file found at " + stencilTemplateFile.getPath());
@@ -273,9 +273,9 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 		List<File> templateFiles = new ArrayList<>();
 
-		for (CustomStencil customStencil : stencils) {
+		for (CustomField customStencil : fields) {
 			File stencilTemplateFile = new File(dynamicStencilsFolder + File.separator + customStencil.getName()
-					+ "-stencil" + File.separator + customStencil.getName() + "-directive.html");
+					+ "-field" + File.separator + customStencil.getName() + "-runtime.html");
 			if (!stencilTemplateFile.exists()) {
 				throw new MojoExecutionException("No stencil template file found at " + stencilTemplateFile.getPath());
 			}

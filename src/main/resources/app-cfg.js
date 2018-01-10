@@ -33,12 +33,12 @@ ACTIVITI.CONFIG.resources = {
 			} ]
 };
 
-var customStencils = [];
-angular.forEach(customStencils, function(stencil) {
+var customFields = [];
+angular.forEach(customFields, function(field) {
 	ACTIVITI.CONFIG.resources['workflow'].push({
 		'tag' : 'script',
 		'type' : 'text/javascript',
 		'src' : ACTIVITI.CONFIG.webContextRoot + '/workflow/dynamic-stencils/'
-				+ stencil + '-stencil/' + stencil + '-ctrl.js?v=1.0'
+				+ field + '-field/' + field + '-ctrl.js?v=1.0'
 	});
 });

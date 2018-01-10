@@ -14,7 +14,7 @@ public abstract class AbstractGenerateStencilMojo extends AbstractMojo {
 	protected MavenProject project;
 
 	@Parameter
-	protected List<CustomStencil> stencils = new ArrayList<CustomStencil>();
+	protected List<CustomField> fields = new ArrayList<CustomField>();
 
 	@Parameter(defaultValue = "${basedir}/src/main/webapp/workflow/dynamic-stencils", readonly = true)
 	protected File dynamicStencilsFolder;

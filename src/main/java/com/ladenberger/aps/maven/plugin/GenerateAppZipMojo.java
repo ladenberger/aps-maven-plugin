@@ -82,7 +82,7 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 		JsonObject newCustomStencilJsonObject = (JsonObject) parser
 				.parse(new InputStreamReader(customStencilJsonInputStream));
 
-		for (CustomStencil stencil : stencils) {
+		for (CustomField stencil : fields) {
 
 			JsonObject dynamicStencilObject = findDynamicStencilObject(jsonStencilArray, stencil.getName());
 			if (dynamicStencilObject == null) {
@@ -113,8 +113,8 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 	}
 
-	private void handleScriptFiles(CustomStencil stencil, JsonObject dynamicStencilObject,
-			File targetAppResourcesFolder) throws MojoExecutionException {
+	private void handleScriptFiles(CustomField stencil, JsonObject dynamicStencilObject, File targetAppResourcesFolder)
+			throws MojoExecutionException {
 
 		if (stencil.getScripts().size() > 0) {
 
@@ -135,8 +135,8 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 			for (ScriptFile scriptFile : stencil.getScripts()) {
 
-				File directiveDataFile = new File(dynamicStencilsFolder + File.separator + stencil.getName()
-						+ "-stencil" + File.separator + "scripts" + File.separator + scriptFile.getName());
+				File directiveDataFile = new File(dynamicStencilsFolder + File.separator + stencil.getName() + "-field"
+						+ File.separator + "scripts" + File.separator + scriptFile.getName());
 
 				if (!directiveDataFile.exists()) {
 					throw new MojoExecutionException(
@@ -186,10 +186,10 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 	}
 
-	private String getDirectiveData(String type, String stencilName) throws MojoExecutionException {
+	private String getDirectiveData(String type, String fieldName) throws MojoExecutionException {
 
-		File directiveDataFile = new File(dynamicStencilsFolder + File.separator + stencilName + "-stencil"
-				+ File.separator + stencilName + "-" + type);
+		File directiveDataFile = new File(dynamicStencilsFolder + File.separator + fieldName + "-field"
+				+ File.separator + fieldName + "-" + type);
 
 		if (!directiveDataFile.exists()) {
 			throw new MojoExecutionException("No directive data file found at " + directiveDataFile.getPath());
