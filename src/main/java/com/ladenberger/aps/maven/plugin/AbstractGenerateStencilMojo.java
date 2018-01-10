@@ -5,8 +5,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import org.apache.maven.plugin.AbstractMojo;
+import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.Parameter;
 import org.apache.maven.project.MavenProject;
+import org.sonatype.plexus.build.incremental.BuildContext;
 
 public abstract class AbstractGenerateStencilMojo extends AbstractMojo {
 
@@ -20,5 +22,8 @@ public abstract class AbstractGenerateStencilMojo extends AbstractMojo {
 	protected File dynamicStencilsFolder;
 
 	protected static String TARGET_FOLDER_NAME = "aps-app";
+
+	@Component(role = org.sonatype.plexus.build.incremental.BuildContext.class)
+	protected BuildContext buildContext;
 
 }

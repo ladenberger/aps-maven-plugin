@@ -84,18 +84,24 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 		for (CustomField stencil : fields) {
 
-			JsonObject dynamicStencilObject = findDynamicStencilObject(jsonStencilArray, stencil.getName());
+			JsonObject dynamicStencilObject = findDynamicStencilObject(jsonStencilArray, stencil.getCustomType());
 			if (dynamicStencilObject == null) {
 				dynamicStencilObject = newCustomStencilJsonObject;
-				dynamicStencilObject.addProperty("customType", stencil.getName());
-				dynamicStencilObject.addProperty("title", stencil.getName());
+				dynamicStencilObject.addProperty("customType", stencil.getCustomType());
 				jsonStencilArray.add(dynamicStencilObject);
 			}
 
 			// Set new template value
-			dynamicStencilObject.addProperty("template", getDirectiveData("directive.html", stencil.getName()));
+			dynamicStencilObject.addProperty("template", getDirectiveData("runtime.html", stencil.getCustomType()));
 			// Set new controller value
-			dynamicStencilObject.addProperty("componentControllerCode", getDirectiveData("ctrl.js", stencil.getName()));
+			dynamicStencilObject.addProperty("componentControllerCode",
+					getDirectiveData("ctrl.js", stencil.getCustomType()));
+
+			if (stencil.getTitle() != null) {
+				dynamicStencilObject.addProperty("title", stencil.getTitle());
+			} else if (!dynamicStencilObject.has("title")) {
+				dynamicStencilObject.addProperty("title", stencil.getCustomType());
+			}
 
 			handleScriptFiles(stencil, dynamicStencilObject, targetAppResourcesFolder);
 
@@ -109,7 +115,10 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 		}
 
 		// Zip the modified App definition data
-		zipDirectory(targetAppResourcesFolder, targetAppFolderPath + File.separator + stencilsName + ".zip");
+		String appDefinitionZipFilePath = targetAppFolderPath + File.separator + stencilsName + ".zip";
+		zipDirectory(targetAppResourcesFolder, appDefinitionZipFilePath);
+
+		buildContext.refresh(new File(appDefinitionZipFilePath));
 
 	}
 
@@ -135,8 +144,8 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 			for (ScriptFile scriptFile : stencil.getScripts()) {
 
-				File directiveDataFile = new File(dynamicStencilsFolder + File.separator + stencil.getName() + "-field"
-						+ File.separator + "scripts" + File.separator + scriptFile.getName());
+				File directiveDataFile = new File(dynamicStencilsFolder + File.separator + stencil.getCustomType()
+						+ "-field" + File.separator + "scripts" + File.separator + scriptFile.getName());
 
 				if (!directiveDataFile.exists()) {
 					throw new MojoExecutionException(
@@ -188,8 +197,8 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 	private String getDirectiveData(String type, String fieldName) throws MojoExecutionException {
 
-		File directiveDataFile = new File(dynamicStencilsFolder + File.separator + fieldName + "-field"
-				+ File.separator + fieldName + "-" + type);
+		File directiveDataFile = new File(dynamicStencilsFolder + File.separator + fieldName + "-field" + File.separator
+				+ fieldName + "-" + type);
 
 		if (!directiveDataFile.exists()) {
 			throw new MojoExecutionException("No directive data file found at " + directiveDataFile.getPath());
@@ -221,6 +230,11 @@ public class GenerateAppZipMojo extends AbstractGenerateStencilMojo {
 
 		// Create target folder structure, i.e. copy APS to target folder
 		File targetAppResourcesFolder = new File(targetAppFolderPath + File.separator + "resources");
+
+		if (targetAppResourcesFolder.exists()) {
+			targetAppResourcesFolder.delete();
+		}
+
 		try {
 			FileUtils.copyDirectory(appFolder, targetAppResourcesFolder);
 		} catch (IOException e) {

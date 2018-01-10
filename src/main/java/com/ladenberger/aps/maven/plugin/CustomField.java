@@ -7,16 +7,18 @@ import com.google.gson.Gson;
 
 public class CustomField {
 
-	private String name;
-
+	private String customType;
+	
+	private String title;
+	
 	private List<ScriptFile> scripts = new ArrayList<>();
 
-	public String getName() {
-		return name;
+	public String getCustomType() {
+		return customType;
 	}
 
-	public void setName(String name) {
-		this.name = name;
+	public void setCustomType(String customType) {
+		this.customType = customType;
 	}
 
 	public List<ScriptFile> getScripts() {
@@ -31,6 +33,14 @@ public class CustomField {
 	public String toString() {
 		Gson gson = new Gson();
 		return gson.toJson(this);
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
 	}
 
 }

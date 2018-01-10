@@ -15,11 +15,9 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang.StringUtils;
 import org.apache.maven.plugin.MojoExecutionException;
-import org.apache.maven.plugins.annotations.Component;
 import org.apache.maven.plugins.annotations.LifecyclePhase;
 import org.apache.maven.plugins.annotations.Mojo;
 import org.apache.maven.plugins.annotations.Parameter;
-import org.sonatype.plexus.build.incremental.BuildContext;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -39,9 +37,6 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 
 	@Parameter(defaultValue = "${basedir}/src/main/webapp/scripts/app-cfg.js", readonly = true)
 	private File appConfigurationFile;
-
-	@Component(role = org.sonatype.plexus.build.incremental.BuildContext.class)
-	private BuildContext buildContext;
 
 	/** @see org.apache.maven.plugin.Mojo#execute() */
 	@Override
@@ -198,8 +193,8 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 				appConfigurationFileLines.add("\t'type' : 'text/javascript',");
 				appConfigurationFileLines
 						.add("\t'src' : ACTIVITI.CONFIG.webContextRoot + '/workflow/dynamic-stencils/'");
-				appConfigurationFileLines
-						.add("\t\t+ '" + stencil.getName() + "-field/scripts/" + scriptFile.getName() + "?v=1.0'");
+				appConfigurationFileLines.add(
+						"\t\t+ '" + stencil.getCustomType() + "-field/scripts/" + scriptFile.getName() + "?v=1.0'");
 				appConfigurationFileLines.add("});");
 
 			}
@@ -207,7 +202,7 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 		}
 
 		appConfigurationFileLines.set(35, "var customFields = ["
-				+ fields.stream().map(cs -> "'" + cs.getName() + "'").collect(Collectors.joining(",")) + "]");
+				+ fields.stream().map(cs -> "'" + cs.getCustomType() + "'").collect(Collectors.joining(",")) + "]");
 
 		try {
 			FileUtils.writeLines(appConfigurationFile, appConfigurationFileLines);
@@ -228,8 +223,8 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 		for (CustomField customStencil : fields) {
 
 			File stencilTemplateFile = new File(
-					dynamicStencilsFolder.getPath() + File.separator + customStencil.getName() + "-field"
-							+ File.separator + customStencil.getName() + "-runtime.html");
+					dynamicStencilsFolder.getPath() + File.separator + customStencil.getCustomType() + "-field"
+							+ File.separator + customStencil.getCustomType() + "-runtime.html");
 
 			if (!stencilTemplateFile.exists()) {
 				throw new MojoExecutionException("No stencil template file found at " + stencilTemplateFile.getPath());
@@ -243,9 +238,9 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 						"Unable to read template file: " + stencilTemplateFile.getAbsolutePath(), ex);
 			}
 			if (fileLines.isEmpty()) {
-				lines.add("\t$templateCache.put('" + customStencil.getName() + "', \"\");");
+				lines.add("\t$templateCache.put('" + customStencil.getCustomType() + "', \"\");");
 			} else {
-				lines.add("\t$templateCache.put('" + customStencil.getName() + "',");
+				lines.add("\t$templateCache.put('" + customStencil.getCustomType() + "',");
 				for (String line : fileLines) {
 					lines.add("\t\"" + line.replace("\\", "\\\\").replace("\"", "\\\"") + "\\n\" +");
 				}
@@ -274,8 +269,8 @@ public class GenerateStencilTemplatesMojo extends AbstractGenerateStencilMojo {
 		List<File> templateFiles = new ArrayList<>();
 
 		for (CustomField customStencil : fields) {
-			File stencilTemplateFile = new File(dynamicStencilsFolder + File.separator + customStencil.getName()
-					+ "-field" + File.separator + customStencil.getName() + "-runtime.html");
+			File stencilTemplateFile = new File(dynamicStencilsFolder + File.separator + customStencil.getCustomType()
+					+ "-field" + File.separator + customStencil.getCustomType() + "-runtime.html");
 			if (!stencilTemplateFile.exists()) {
 				throw new MojoExecutionException("No stencil template file found at " + stencilTemplateFile.getPath());
 			}
