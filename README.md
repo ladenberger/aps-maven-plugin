@@ -87,7 +87,7 @@ where, *[customType]* is the type of the configured custom stencil field (e.g. *
 
 That's all! Just include the custom stencil fields in a form and a user task respectively in your APS development environment and start some processes and tasks.
 	
-### Manual Update of APS Stencil Webresources
+## Manual Update of APS Stencil Webresources
 
 Before your custom stencil field template files are applied in the APS development environment, you need to genereate the APS stencil webresources based on your custom stencil template files (*[customType]-runtime.html* and *[customType]-ctrl.js*).
 
@@ -97,7 +97,7 @@ For this, execute the maven goal:
 mvn aps:stencil-templates
 ```
 
-### Auto Update of APS Stencil Webresources (Eclipse)
+## Auto Update of APS Stencil Webresources (Eclipse)
 
 Add this snippet to your pom.xml to enable generating/updating the APS stencil webresources automatically whenever you add/change/delete a custom stencil field template file (e.g. *[customType]-runtime.html* and *[customType]-ctrl.js*). The plugin is designed to be incremental build aware. 
 
