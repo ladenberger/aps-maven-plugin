@@ -46,7 +46,7 @@ Plugin with useful tools and helper for the development of custom stencils for A
 		...
 ```
 
-The plugin will look for the following files in your Maven WAR project based on the configuration shown above:
+The plugin will look for the following stencil filed template files in your Maven WAR project based on the configuration shown above:
 
 ```
 src
@@ -64,15 +64,24 @@ src
 -------signature_pad.js
 ```
 
-For each custom stencil field a new subfolder called *[stencil name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[stencil-name]-field* folder at least the following two files should be created:
+For each custom stencil field a new subfolder called *[form name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[form-name]-field* folder at least the following two template files should be created:
 	
-* [stencil name]-runtime.html: Defines the form runtime template
-* [stencil name]-ctrl.js: Defines the custom component controller
+* [form name]-runtime.html: Defines the form runtime template
+* [form name]-ctrl.js: Defines the custom component controller
 	
+## Manual Update of APS Stencil Webresources
 
-## Auto Update in Eclipse
+Execute the maven goal
 
-Add this snippet to your pom.xml to enable updating the dynamic stencil template file automatically whenever you add/change/delete a template (design or controller). The plugin is designed to be incremental build aware. 
+```
+mvn aps:stencil-templates
+```
+
+for generating/updating the APS stencil webresources based on your custom stencil template files (*[form name]-runtime.html* and *[form name]-ctrl.js*). The generated APS stencil webresources are needed to enable your custom stencil fields for your APS development environment.
+
+## Auto Update of APS Stencil Webresources (Eclipse)
+
+Add this snippet to your pom.xml to enable generating/updating the APS stencil webresources automatically whenever you add/change/delete a custom stencil field template file (e.g. *[form name]-runtime.html* and *[form name]-ctrl.js*). The plugin is designed to be incremental build aware. 
 
 ```
 	<build>
