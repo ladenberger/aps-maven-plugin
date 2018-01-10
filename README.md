@@ -136,4 +136,16 @@ Add this snippet to your pom.xml to enable generating/updating the APS stencil w
 
 ## From Development to Production
 
-Although this plugin will support you developing custom APS stencils, the produced APS stencil webresources are insufficient for production.
+Although this plugin will support you developing custom APS stencils, the produced APS stencil webresources are insufficient for the production environment. This is becuse the runtime template and controller script is "outsourced" (located in external files). So, the out-of-the-box versioning of custom stencils in APS is not working anymore. To overcome this challenge, this plugin provides the goal *app-zip* that takes your current app definition and generates the stencil definition with inline code. Just as you would develop your custom stencil fields using the APS stencils editor.
+
+Before you can use this plugin feature, you will need (1) to export your app definition, (2) unzip the exported app definition zip file, and (3) put the unzipped files into a new folder called *app* in your Maven WAR project.
+
+As a next step you need to configure the name of your custom stencil set which you have defined in the APS stencils editor. Set the name in the *stencilsName* property as demonstrated in the example plugin configuration above.
+
+Now, run the following goal in your project:
+
+```
+mvn aps:app-zip
+```
+
+The goal should generate a new app definition zip file located at *target/aps-app/[stencilsName].zip*. This app definition zip file can be used in your production environment.
