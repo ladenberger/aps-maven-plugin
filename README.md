@@ -28,29 +28,51 @@ Plugin with useful tools and helper for the development of custom stencils for A
 				<configuration>
 					<goalPrefix>aps</goalPrefix>
 					<stencilsName>MyCustomStencils</stencilsName>
-					<stencils>
-						<stencil>
+					<fields>
+						<field>
 							<name>notes</name>
-						</stencil>
-						<stencil>
+						</field>
+						<field>
 							<name>signature</name>
 							<scripts>
 								<script>
 									<name>signature_pad.js</name>
 								</script>
 							</scripts>
-						</stencil>
-					</stencils>
+						</field>
+					</fields>
 				</configuration>
 			</plugin>
 		...
 ```
 
-The plugin expects 
+The plugin will look for the following files in your Maven WAR project based on the configuration shown above:
+
+```
+src
+-main
+--webapp
+---workflow
+----dynamic-stencils
+-----notes-field
+------notes-runtime.html
+------notes-ctrl.js
+-----signature-field
+------signature-runtime.html
+------signature-ctrl.js
+------scripts
+-------signature_pad.js
+```
+
+For each custom stencil field a new subfolder called *<stencil name>-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *<stencil-name>-field* folder at least the following two files should be created:
+	
+* <stencil name>-runtime.html: Defines the form runtime template
+* <stencil name>-ctrl.js: Defines the custom component controller
+	
 
 ## Auto Update in Eclipse
 
-Add this snippet to your pom.xml to enable updating the dynamic stencil templates files automatically whenever you add/change/delete a template (design or controller). The plugin is designed to be incremental build aware. 
+Add this snippet to your pom.xml to enable updating the dynamic stencil template file automatically whenever you add/change/delete a template (design or controller). The plugin is designed to be incremental build aware. 
 
 ```
 	<build>
@@ -83,22 +105,4 @@ Add this snippet to your pom.xml to enable updating the dynamic stencil template
 					</configuration>
 				</plugin>
 			...	
-```
-
-Based on the configuration, the plugin will look for the following files in your Maven WAR project:
-
-```
-src
--main
---webapp
----workflow
-----dynamic-stencils
------notes-stencil
-------notes-directive.html
-------notes-ctrl.js
------signature-stencil
-------signature-directive.html
-------signature-ctrl.js
-------scripts
--------signature_pad.js
 ```
