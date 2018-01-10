@@ -30,10 +30,12 @@ Plugin with useful tools and helper for the development of custom stencil fields
 					<stencilsName>MyCustomStencils</stencilsName>
 					<fields>
 						<field>
-							<name>notes</name>
+							<customType>notes</customType>
+							<title>Notes Form Field</title>
 						</field>
 						<field>
-							<name>signature</name>
+							<customType>signature</customType>
+							<title>Signature Form Field</title>
 							<scripts>
 								<script>
 									<name>signature_pad.js</name>
@@ -64,10 +66,10 @@ src
 -------signature_pad.js
 ```
 
-For each custom stencil field a new subfolder called *[field name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[field name]-field* folder at least the following two template files should be created:
+For each custom stencil field a new subfolder called *[customType]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[customType]-field* folder at least the following two template files should be created:
 	
-* [field name]-runtime.html: Defines the form runtime template
-* [field name]-ctrl.js: Defines the custom component controller
+* [customType]-runtime.html: Defines the form runtime template
+* [customType]-ctrl.js: Defines the custom component controller
 
 Optionally, you can include additional JavaScript snippets or libraries. For this, just place the JavaScript files in a subfolder *scripts* and configure them as shown in the example above (see *signature_pad.js*).
 
@@ -78,16 +80,16 @@ For developing custom stencil fields using this plugin, a minimal configuration 
 In the form field configuration view in the APS stencils editor, select a name for your custom stencil field and set the following code snippet as the *form runtime template*:
 
 ```
-<dynamic-stencil stencil="[field name]"></dynamic-stencil>
+<dynamic-stencil stencil="[customType]"></dynamic-stencil>
 ```
 
-where, *[field name]* is the name of the configured custom stencil field (e.g. *notes* and *signature*).
+where, *[customType]* is the type of the configured custom stencil field (e.g. *notes* and *signature*).
 
 That's all! Just include the custom stencil fields in a form and a user task respectively in your APS development environment and start some processes and tasks.
 	
 ### Manual Update of APS Stencil Webresources
 
-Before your custom stencil field template files are applied in the APS development environment, you need to genereate the APS stencil webresources based on your custom stencil template files (*[field name]-runtime.html* and *[field name]-ctrl.js*).
+Before your custom stencil field template files are applied in the APS development environment, you need to genereate the APS stencil webresources based on your custom stencil template files (*[customType]-runtime.html* and *[customType]-ctrl.js*).
 
 For this, execute the maven goal:
 
@@ -97,7 +99,7 @@ mvn aps:stencil-templates
 
 ### Auto Update of APS Stencil Webresources (Eclipse)
 
-Add this snippet to your pom.xml to enable generating/updating the APS stencil webresources automatically whenever you add/change/delete a custom stencil field template file (e.g. *[field name]-runtime.html* and *[field name]-ctrl.js*). The plugin is designed to be incremental build aware. 
+Add this snippet to your pom.xml to enable generating/updating the APS stencil webresources automatically whenever you add/change/delete a custom stencil field template file (e.g. *[customType]-runtime.html* and *[customType]-ctrl.js*). The plugin is designed to be incremental build aware. 
 
 ```
 	<build>
