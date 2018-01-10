@@ -2,21 +2,7 @@
 
 Plugin with useful tools and helper for the development of custom stencil fields for APS (Alfresco Process Services).
 
-## Prepare Custom Stencil Fields
-
-For developing a custom stencil field using this plugin, you need to create a new custom stencil field once using the APS stencils editor. Check the official Alfresco APS documentation https://docs.alfresco.com/process-services1.7/topics/custom_form_fields.html for more information about custom stencils.
-
-Select a name for your custom stencil field and set the following code snippet as the *form runtime template*:
-
-```
-<dynamic-stencil stencil="[stencil name]"></dynamic-stencil>
-```
-
-That's all! Just include this custom stencil field in a form and user task respectively in your APS development environment.
-
-## Configure and Develop Custom Stencil Fields
-
-### Example Plugin Configuration
+## Example Plugin Configuration (Maven)
 
 ```
 	<build>
@@ -60,7 +46,7 @@ That's all! Just include this custom stencil field in a form and user task respe
 		...
 ```
 
-The plugin will look for the following stencil filed template files in your Maven WAR project based on the configuration shown above:
+The plugin will look for the following custom stencil field template files in your Maven WAR project based on the configuration shown above:
 
 ```
 src
@@ -78,20 +64,36 @@ src
 -------signature_pad.js
 ```
 
-For each custom stencil field a new subfolder called *[field name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[field-name]-field* folder at least the following two template files should be created:
+For each custom stencil field a new subfolder called *[field name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[field name]-field* folder at least the following two template files should be created:
 	
 * [field name]-runtime.html: Defines the form runtime template
 * [field name]-ctrl.js: Defines the custom component controller
+
+Optionally, you can include additional JavaScript snippets or libraries. For this, just place the JavaScript files in a subfolder *scripts* and configure them as shown in the example above (see *signature_pad.js*).
+
+## Example Plugin Configuration (APS)
+
+For developing custom stencil fields using this plugin, a minimal configuration is needed in APS. For each configured custom stencil field, you need to create a new custom stencil field using the APS stencils editor. Check the official Alfresco APS documentation https://docs.alfresco.com/process-services1.7/topics/custom_form_fields.html for more information about custom stencils.
+
+In the form field configuration view in the APS stencils editor, select a name for your custom stencil field and set the following code snippet as the *form runtime template*:
+
+```
+<dynamic-stencil stencil="[field name]"></dynamic-stencil>
+```
+
+where, *[field name]* is the name of the configured custom stencil field (e.g. *notes* and *signature*).
+
+That's all! Just include the custom stencil fields in a form and a user task respectively in your APS development environment and start some processes and tasks.
 	
 ### Manual Update of APS Stencil Webresources
 
-Execute the maven goal
+Before your custom stencil field template files are applied in the APS development environment, you need to genereate the APS stencil webresources based on your custom stencil template files (*[field name]-runtime.html* and *[field name]-ctrl.js*).
+
+For this, execute the maven goal:
 
 ```
 mvn aps:stencil-templates
 ```
-
-for generating/updating the APS stencil webresources based on your custom stencil template files (*[field name]-runtime.html* and *[field name]-ctrl.js*). The generated APS stencil webresources are needed to enable your custom stencil fields for your APS development environment.
 
 ### Auto Update of APS Stencil Webresources (Eclipse)
 
