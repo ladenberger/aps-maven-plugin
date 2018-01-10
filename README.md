@@ -1,4 +1,4 @@
-# Alfresco Process Services Maven Plugin
+# APS (Alfresco Process Services) Maven Plugin
 
 Plugin with useful tools and helper for the development of custom stencil fields for APS (Alfresco Process Services).
 
