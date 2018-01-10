@@ -149,3 +149,7 @@ mvn aps:app-zip
 ```
 
 The goal should generate a new app definition zip file located at *target/aps-app/[stencilsName].zip*. This app definition zip file can be used in your production environment.
+
+## Example Project
+
+An example project is available in the repository https://github.com/ladenberger/aps-stencils-devcon.
