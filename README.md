@@ -64,10 +64,10 @@ src
 -------signature_pad.js
 ```
 
-For each custom stencil field a new subfolder called *[form name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[form-name]-field* folder at least the following two template files should be created:
+For each custom stencil field a new subfolder called *[field name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[field-name]-field* folder at least the following two template files should be created:
 	
-* [form name]-runtime.html: Defines the form runtime template
-* [form name]-ctrl.js: Defines the custom component controller
+* [field name]-runtime.html: Defines the form runtime template
+* [field name]-ctrl.js: Defines the custom component controller
 	
 ## Manual Update of APS Stencil Webresources
 
@@ -77,11 +77,11 @@ Execute the maven goal
 mvn aps:stencil-templates
 ```
 
-for generating/updating the APS stencil webresources based on your custom stencil template files (*[form name]-runtime.html* and *[form name]-ctrl.js*). The generated APS stencil webresources are needed to enable your custom stencil fields for your APS development environment.
+for generating/updating the APS stencil webresources based on your custom stencil template files (*[field name]-runtime.html* and *[field name]-ctrl.js*). The generated APS stencil webresources are needed to enable your custom stencil fields for your APS development environment.
 
 ## Auto Update of APS Stencil Webresources (Eclipse)
 
-Add this snippet to your pom.xml to enable generating/updating the APS stencil webresources automatically whenever you add/change/delete a custom stencil field template file (e.g. *[form name]-runtime.html* and *[form name]-ctrl.js*). The plugin is designed to be incremental build aware. 
+Add this snippet to your pom.xml to enable generating/updating the APS stencil webresources automatically whenever you add/change/delete a custom stencil field template file (e.g. *[field name]-runtime.html* and *[field name]-ctrl.js*). The plugin is designed to be incremental build aware. 
 
 ```
 	<build>
