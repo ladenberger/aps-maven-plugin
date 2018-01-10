@@ -64,10 +64,10 @@ src
 -------signature_pad.js
 ```
 
-For each custom stencil field a new subfolder called *<stencil name>-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *<stencil-name>-field* folder at least the following two files should be created:
+For each custom stencil field a new subfolder called *[stencil name]-field* should be created in the project folder *src/main/webapp/workflow/dynamic-stencils*. In the *[stencil-name]-field* folder at least the following two files should be created:
 	
-* <stencil name>-runtime.html: Defines the form runtime template
-* <stencil name>-ctrl.js: Defines the custom component controller
+* [stencil name]-runtime.html: Defines the form runtime template
+* [stencil name]-ctrl.js: Defines the custom component controller
 	
 
 ## Auto Update in Eclipse
