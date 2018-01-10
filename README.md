@@ -1,8 +1,22 @@
 # Alfresco Process Services Maven Plugin
 
-Plugin with useful tools and helper for the development of custom stencils for APS (Alfresco Process Services).
+Plugin with useful tools and helper for the development of custom stencil fields for APS (Alfresco Process Services).
 
-## Sample Plugin Configuration
+## Prepare Custom Stencil Fields
+
+For developing a custom stencil field using this plugin, you need to create a new custom stencil field once using the APS stencils editor. Check the official Alfresco APS documentation https://docs.alfresco.com/process-services1.7/topics/custom_form_fields.html for more information about custom stencils.
+
+Select a name for your custom stencil field and set the following code snippet as the *form runtime template*:
+
+```
+<dynamic-stencil stencil="[stencil name]"></dynamic-stencil>
+```
+
+That's all! Just include this custom stencil field in a form and user task respectively in your APS development environment.
+
+## Configure and Develop Custom Stencil Fields
+
+### Example Plugin Configuration
 
 ```
 	<build>
@@ -69,7 +83,7 @@ For each custom stencil field a new subfolder called *[field name]-field* should
 * [field name]-runtime.html: Defines the form runtime template
 * [field name]-ctrl.js: Defines the custom component controller
 	
-## Manual Update of APS Stencil Webresources
+### Manual Update of APS Stencil Webresources
 
 Execute the maven goal
 
@@ -79,7 +93,7 @@ mvn aps:stencil-templates
 
 for generating/updating the APS stencil webresources based on your custom stencil template files (*[field name]-runtime.html* and *[field name]-ctrl.js*). The generated APS stencil webresources are needed to enable your custom stencil fields for your APS development environment.
 
-## Auto Update of APS Stencil Webresources (Eclipse)
+### Auto Update of APS Stencil Webresources (Eclipse)
 
 Add this snippet to your pom.xml to enable generating/updating the APS stencil webresources automatically whenever you add/change/delete a custom stencil field template file (e.g. *[field name]-runtime.html* and *[field name]-ctrl.js*). The plugin is designed to be incremental build aware. 
 
@@ -115,3 +129,7 @@ Add this snippet to your pom.xml to enable generating/updating the APS stencil w
 				</plugin>
 			...	
 ```
+
+## From Development to Production
+
+Although this plugin will support you developing custom APS stencils, the produced APS stencil webresources are insufficient for production.
