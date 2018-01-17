@@ -8,7 +8,7 @@ Plugin with useful tools and helper for the development of custom stencil fields
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>com.ladenberger</groupId>
+				<groupId>com.itnovum</groupId>
 				<artifactId>aps-maven-plugin</artifactId>
 				<version>0.0.1</version>
 				<executions>
@@ -114,7 +114,7 @@ Add this snippet to your pom.xml to enable generating/updating the APS stencil w
 							<pluginExecutions>
 								<pluginExecution>
 									<pluginExecutionFilter>
-										<groupId>com.ladenberger</groupId>
+										<groupId>com.itnovum</groupId>
 										<artifactId>aps-maven-plugin</artifactId>
 										<versionRange>[0.0.1,)</versionRange>
 										<goals>
